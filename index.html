@@ -216,7 +216,7 @@
               throw new Error("SW_FAILED: " + err.message);
             });
           
-          statusDiv.innerText = "جاري استخراج رمز الجهاز...";
+          statusDiv.innerText = "جاري التجهيز...";
           const currentToken = await getToken(messaging, { 
             vapidKey: vapidKey,
             serviceWorkerRegistration: registration 
