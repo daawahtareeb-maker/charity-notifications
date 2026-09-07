@@ -1,0 +1,26 @@
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+// تهيئة تطبيق فايربيز داخل الـ Service Worker
+firebase.initializeApp({
+  apiKey: "AIzaSyA7GkE88wuFBkKdnhd1-zHzLewuOulRxZA",
+  authDomain: "charity-notifications-6cd5e.firebaseapp.com",
+  projectId: "charity-notifications-6cd5e",
+  storageBucket: "charity-notifications-6cd5e.firebasestorage.app",
+  messagingSenderId: "980119733083",
+  appId: "1:980119733083:web:af2da1bc82c5c35a5ed07e",
+  measurementId: "G-4HRKVLCZ0G"
+});
+
+const messaging = firebase.messaging();
+
+// استقبال الإشعارات عندما يكون المتصفح مغلقاً أو في الخلفية
+messaging.onBackgroundMessage((payload) => {
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: 'https://cdn-icons-png.flaticon.com/512/2523/2523197.png' // يمكن استبدالها برابط شعار الجمعية
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
