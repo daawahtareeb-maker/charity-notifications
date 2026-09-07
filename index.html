@@ -122,6 +122,7 @@
       color: #083325;
       font-weight: 700;
       min-height: 20px;
+      line-height: 1.6;
     }
   </style>
 </head>
@@ -175,33 +176,65 @@
       const statusDiv = document.getElementById('status-msg');
       const btn = document.getElementById('subscribe-btn');
       
-      // =========================================================
-      // 1) ضع مفتاح VAPID الذي استخرجته من Firebase بين التنصيص
-      // =========================================================
-      const vapidKey = "BOEoD5Dkg_49kYKReTj8jDFxogIRjDOdHa2fGmgvL1yP6aXSP3IZjftcXwsB_FtlIOaUYV5yrRYzTywrlgTVWfU"; 
+      // ضع هنا مفتاح VAPID الذي استخرجته من Firebase Cloud Messaging
+      const vapidKey = "ضع_مفتاح_VAPID_هنا"; 
+      
+      // ضع هنا رابط Web App الخاص بـ Google Apps Script الذي ينتهي بـ /exec
+      const appsScriptUrl = "ضع_رابط_WEB_APP_هنا"; 
 
-      // =========================================================
-      // 2) ضع رابط Web App الخاص بـ Google Apps Script الذي ينتهي بـ /exec
-      // =========================================================
-      const appsScriptUrl = "https://script.google.com/macros/s/AKfycbzjkF5IsGdPhdU66Oz3WESZqBw54um_lpFvKhhAMsfHGEbXWMTTSRhIpbRgkuZjnxC2/exec"; 
+      statusDiv.style.color = "#b91c1c";
+
+      // 1. فحص فتح الرابط داخل متصفح الواتساب المدمج
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      const isInApp = (ua.indexOf("WhatsApp") > -1) || (ua.indexOf("FBAN") > -1) || (ua.indexOf("Instagram") > -1);
+      if (isInApp) {
+        statusDiv.innerText = "⚠️ يرجى فتح الرابط في متصفح خارجي (مثل Chrome أو Safari) وليس من داخل تطبيق الواتساب لتفعيل الإشعارات.";
+        return;
+      }
+
+      // 2. فحص إدخال المفاتيح في الكود
+      if (vapidKey.includes("ضع_مفتاح") || appsScriptUrl.includes("ضع_رابط")) {
+        statusDiv.innerText = "⚙️ خطأ في الإعدادات: لم يتم إدخال مفتاح VAPID أو رابط الخادم داخل ملف index.html بعد.";
+        return;
+      }
+
+      // 3. فحص دعم المتصفح للإشعارات
+      if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        statusDiv.innerText = "❌ المتصفح الحالي لا يدعم ميزة إشعارات الويب.";
+        return;
+      }
+
+      // 4. فحص حالة الحظر المسبق
+      if (Notification.permission === 'denied') {
+        statusDiv.innerText = "🚫 الإشعارات محظورة! اضغط على أيقونة القفل 🔒 بجانب رابط الموقع في الأعلى وغير إذن الإشعارات إلى (سماح).";
+        return;
+      }
 
       try {
         btn.disabled = true;
+        statusDiv.style.color = "#083325";
         statusDiv.innerText = "جاري طلب إذن الإشعارات من جهازك...";
         
         const permission = await Notification.requestPermission();
         
         if (permission === 'granted') {
-          statusDiv.innerText = "جاري تفعيل الاشتراك...";
+          statusDiv.innerText = "جاري الاتصال بملف الخدمة...";
           
-          const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+          const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js')
+            .catch(err => {
+              throw new Error("SW_FAILED: " + err.message);
+            });
           
+          statusDiv.innerText = "جاري استخراج رمز الجهاز...";
           const currentToken = await getToken(messaging, { 
             vapidKey: vapidKey,
             serviceWorkerRegistration: registration 
+          }).catch(err => {
+            throw new Error("VAPID_FAILED: " + err.message);
           });
 
           if (currentToken) {
+            statusDiv.innerText = "جاري تسجيل الاشتراكات...";
             const topics = [];
             if (document.getElementById('sub-funerals').checked) topics.push('funerals');
             if (document.getElementById('sub-lectures').checked) topics.push('lectures');
@@ -213,23 +246,39 @@
               mode: 'no-cors',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ token: currentToken, topics: topics })
+            }).catch(err => {
+              throw new Error("SERVER_FAILED: " + err.message);
             });
 
             btn.style.background = 'linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%)';
             btn.querySelector('span').innerText = 'تم التفعيل بنجاح!';
-            statusDiv.innerText = "أنت الآن مطلع على كل جديد بنجاح.";
+            statusDiv.style.color = "#15803d";
+            statusDiv.innerText = "✅ أنت الآن مطلع على كل جديد بنجاح.";
           } else {
-            statusDiv.innerText = "لم نتمكن من الحصول على تصريح الجهاز.";
+            statusDiv.style.color = "#b91c1c";
+            statusDiv.innerText = "❌ تعذر استخراج رمز الجهاز، أعد تحديث الصفحة وحاول مجدداً.";
             btn.disabled = false;
           }
         } else {
-          statusDiv.innerText = "تم رفض إذن الإشعارات من المتصفح.";
+          statusDiv.style.color = "#b91c1c";
+          statusDiv.innerText = "🚫 تم رفض منح إذن الإشعارات من قبل المستخدم.";
           btn.disabled = false;
         }
       } catch (error) {
-        statusDiv.innerText = "حدث خطأ أثناء التفعيل، تأكد من إعدادات المتصفح.";
-        console.error(error);
         btn.disabled = false;
+        statusDiv.style.color = "#b91c1c";
+        
+        const errMessage = error.toString();
+        if (errMessage.includes("SW_FAILED")) {
+          statusDiv.innerText = "❌ تعذر الوصول لملف firebase-messaging-sw.js. تأكد من رفعه باسم صحيح في GitHub.";
+        } else if (errMessage.includes("VAPID_FAILED")) {
+          statusDiv.innerText = "❌ مفتاح VAPID المكتوب غير صحيح أو لم يفعل في Firebase Cloud Messaging.";
+        } else if (errMessage.includes("SERVER_FAILED")) {
+          statusDiv.innerText = "❌ تعذر الاتصال بخادم الجمعية (Apps Script). تأكد من صحة الرابط وأن خيار النشر محدد لـ (أي شخص).";
+        } else {
+          statusDiv.innerText = "❌ خطأ التشخيص: " + error.message;
+        }
+        console.error(error);
       }
     }
   </script>
