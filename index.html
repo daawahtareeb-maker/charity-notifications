@@ -176,10 +176,7 @@
       const statusDiv = document.getElementById('status-msg');
       const btn = document.getElementById('subscribe-btn');
       
-      // ضع هنا مفتاح VAPID الذي استخرجته من Firebase Cloud Messaging
       const vapidKey = "BOEoD5Dkg_49kYKReTj8jDFxogIRjDOdHa2fGmgvL1yP6aXSP3IZjftcXwsB_FtlIOaUYV5yrRYzTywrlgTVWfU"; 
-      
-      // ضع هنا رابط Web App الخاص بـ Google Apps Script الذي ينتهي بـ /exec
       const appsScriptUrl = "https://script.google.com/macros/s/AKfycbzjkF5IsGdPhdU66Oz3WESZqBw54um_lpFvKhhAMsfHGEbXWMTTSRhIpbRgkuZjnxC2/exec"; 
 
       statusDiv.style.color = "#b91c1c";
@@ -192,19 +189,13 @@
         return;
       }
 
-      // 2. فحص إدخال المفاتيح في الكود
-      if (vapidKey.includes("ضع_مفتاح") || appsScriptUrl.includes("ضع_رابط")) {
-        statusDiv.innerText = "⚙️ خطأ في الإعدادات: لم يتم إدخال مفتاح VAPID أو رابط الخادم داخل ملف index.html بعد.";
-        return;
-      }
-
-      // 3. فحص دعم المتصفح للإشعارات
+      // 2. فحص دعم المتصفح للإشعارات
       if (!('Notification' in window) || !('serviceWorker' in navigator)) {
         statusDiv.innerText = "❌ المتصفح الحالي لا يدعم ميزة إشعارات الويب.";
         return;
       }
 
-      // 4. فحص حالة الحظر المسبق
+      // 3. فحص حالة الحظر المسبق
       if (Notification.permission === 'denied') {
         statusDiv.innerText = "🚫 الإشعارات محظورة! اضغط على أيقونة القفل 🔒 بجانب رابط الموقع في الأعلى وغير إذن الإشعارات إلى (سماح).";
         return;
