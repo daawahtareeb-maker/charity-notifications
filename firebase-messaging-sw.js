@@ -1,7 +1,6 @@
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// تهيئة تطبيق فايربيز داخل الـ Service Worker
 firebase.initializeApp({
   apiKey: "AIzaSyA7GkE88wuFBkKdnhd1-zHzLewuOulRxZA",
   authDomain: "charity-notifications-6cd5e.firebaseapp.com",
@@ -14,13 +13,24 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// استقبال الإشعارات عندما يكون المتصفح مغلقاً أو في الخلفية
 messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: 'https://cdn-icons-png.flaticon.com/512/2523/2523197.png' // يمكن استبدالها برابط شعار الجمعية
+    icon: 'https://dawahtareeb.com/wp-content/uploads/2023/01/شعار-الجمعية-بخلفية-مميزة.jpeg', 
+    image: payload.notification.image, // لالتقاط الصورة العريضة
+    data: {
+      url: payload.fcmOptions?.link || '/' // لالتقاط الرابط
+    }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// دالة تفاعلية لفتح الرابط عند نقر المستخدم على الإشعار
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  if(event.notification.data && event.notification.data.url) {
+    event.waitUntil(clients.openWindow(event.notification.data.url));
+  }
 });
