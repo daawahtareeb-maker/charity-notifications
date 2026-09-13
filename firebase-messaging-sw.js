@@ -20,8 +20,9 @@ messaging.onBackgroundMessage((payload) => {
     icon: 'https://dawahtareeb.com/wp-content/uploads/2023/01/شعار-الجمعية-بخلفية-مميزة.jpeg', 
     image: payload.notification.image, // لالتقاط الصورة العريضة
     data: {
-      url: payload.fcmOptions?.link || '/' // لالتقاط الرابط
-    }
+  // فتح رابط التفاصيل المرفق مع الإشعار، وإن لم يوجد يفتح موقع المشتركين مباشرة
+  url: payload.fcmOptions?.link || 'https://daawahtareeb-maker.github.io/charity-notifications/' 
+}
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
