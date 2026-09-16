@@ -9,13 +9,11 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
-// فايربيز سيتولى تلقائياً إظهار الإشعار وفتح الرابط بناءً على البيانات القادمة من الخادم
 
 // ==============================================================
-// إضافة نظام الإحصائيات (الاستلام والنقر)
+// نظام الإحصائيات (الاستلام والنقر) مع تجاوز قيود CORS
 // ==============================================================
 
-// ⚠️ ضع رابط تطبيق الويب (Web App URL) الجديد الذي نسخته من Apps Script هنا
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7emLwKClLEgeTBkYLzjRwaZyV3PbrTAiVRoZuaToRvfV-qdjKzWTXqd69B_BDIQz-/exec";
 
 // دالة إرسال النبضات إلى جداول بيانات جوجل
@@ -24,20 +22,25 @@ function sendAnalyticsPulse(notificationId, type) {
   
   fetch(APPS_SCRIPT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    mode: 'no-cors', // تم الإضافة: لتجاوز حظر CORS وتوجيهات جوجل في الخلفية
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({
       action: "analytics",
       notificationId: notificationId,
-      type: type // إما 'receive' أو 'click'
+      type: type
     })
   }).catch(err => console.log("Analytics Error: ", err));
 }
 
 // 1. مراقبة وصول الإشعار في الخلفية (تم الاستلام)
 self.addEventListener('push', function(event) {
+  if (!event.data) return;
+  
   try {
     const payload = event.data.json();
-    const notificationId = payload.data ? payload.data.notificationId : null;
+    // استخراج معرف الإشعار من حزمة البيانات
+    const notificationId = (payload.data && payload.data.notificationId) || 
+                           (payload.notification && payload.notification.data && payload.notification.data.notificationId);
     
     if (notificationId) {
       sendAnalyticsPulse(notificationId, 'receive');
@@ -45,15 +48,21 @@ self.addEventListener('push', function(event) {
   } catch (e) {
     console.log("خطأ في التقاط الاستلام: ", e);
   }
-  // لا نوقف الحدث هنا، لكي يكمل Firebase عمله الطبيعي ويعرض الإشعار
 });
 
 // 2. مراقبة التفاعل مع الإشعار (تم النقر)
 self.addEventListener('notificationclick', function(event) {
   try {
-    // Firebase يقوم بتخزين البيانات الأصلية داخل كائن FCM_MSG
-    const fcmData = event.notification.data && event.notification.data.FCM_MSG ? event.notification.data.FCM_MSG : null;
-    const notificationId = fcmData && fcmData.data ? fcmData.data.notificationId : null;
+    let notificationId = null;
+    
+    if (event.notification && event.notification.data) {
+      const data = event.notification.data;
+      if (data.notificationId) {
+        notificationId = data.notificationId;
+      } else if (data.FCM_MSG && data.FCM_MSG.data && data.FCM_MSG.data.notificationId) {
+        notificationId = data.FCM_MSG.data.notificationId;
+      }
+    }
     
     if (notificationId) {
       sendAnalyticsPulse(notificationId, 'click');
@@ -61,5 +70,4 @@ self.addEventListener('notificationclick', function(event) {
   } catch (e) {
     console.log("خطأ في التقاط النقر: ", e);
   }
-  // نترك Firebase يكمل عمله الطبيعي في فتح الرابط المرفق
 });
